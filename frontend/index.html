@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zaloguj się lub zarejestruj</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+      }
+      /* Animacje dla nowego modułu */
+      .loader {
+        border-top-color: #3498db;
+        -webkit-animation: spinner 1.5s linear infinite;
+        animation: spinner 1.5s linear infinite;
+      }
+      @keyframes spinner {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body class="bg-[#f0f2f5]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // --- 1. IKONY ISTNIEJĄCE (Z Twojego oryginalnego pliku) ---
+      const ShieldAlert = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+      );
+      const Lock = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+      );
+      const Globe = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><line x1="2" x2="22" y1="12" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+      );
+      const AlertTriangle = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+      );
+      const CheckCircle2 = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+      );
+      const XCircle = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>
+      );
+
+      // --- NOWE IKONY (Dla modułu Digital Footprint) ---
+      const MapPin = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>);
+      const Monitor = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>);
+      const Network = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>);
+      const Cpu = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3"/><path d="M15 1v3"/><path d="M9 20v3"/><path d="M15 20v3"/><path d="M20 9h3"/><path d="M20 14h3"/><path d="M1 9h3"/><path d="M1 14h3"/></svg>);
+
+      // --- 2. NOWE IKONY (Dla modułu Security Check) ---
+      const CheckCircle = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>);
+      const SearchIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
+      const ChevronDown = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 12 15 18 9"></polyline></svg>);
+      const ChevronUp = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="18 15 12 9 6 15"></polyline></svg>);
+      const KeyIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>);
+
+      const Gauge = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>);
+      const Target = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>);
+      // --- 3. HELPER: SHA-1 (Do haszowania hasła) ---
+      async function sha1(str) {
+        const buffer = new TextEncoder( 'utf-8' ).encode( str );
+        const digest = await crypto.subtle.digest('SHA-1', buffer);
+        return Array.from(new Uint8Array(digest))
+            .map(x => x.toString(16).padStart(2,'0'))
+            .join('')
+            .toUpperCase();
+      }
+
+      // --- 4. KOMPONENT: PasswordCheck (Nowy) ---
+      const PasswordCheck = ({ password }) => {
+        const [result, setResult] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        useEffect(() => {
+            const checkPassword = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    // Hashowanie k-Anonymity
+                    const hash = await sha1(password);
+                    const prefix = hash.substring(0, 5);
+                    const suffix = hash.substring(5);
+
+                    const response = await fetch(`http://127.0.0.1:5000/range/${prefix}`);
+                    if (!response.ok) throw new Error("Błąd API haseł");
+
+                    const textData = await response.text();
+                    const lines = textData.split('\n');
+                    const match = lines.find(line => line.startsWith(suffix));
+
+                    if (match) {
+                        const count = parseInt(match.split(':')[1]);
+                        setResult({ found: true, count: count });
+                    } else {
+                        setResult({ found: false, count: 0 });
+                    }
+                } catch (err) {
+                    console.error(err);
+                    setError("Nie udało się sprawdzić hasła.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+            if (password) checkPassword();
+        }, [password]);
+
+        if (loading) return <div className="text-sm text-slate-400 animate-pulse mt-2">Analiza hasła (SHA-1 k-Anonymity)...</div>;
+        if (error) return <div className="text-sm text-red-400 mt-2">{error}</div>;
+        if (!result) return null;
+
+        if (result.found) {
+            return (
+                <div className="mt-4 bg-red-900/40 border border-red-500 p-4 rounded-lg flex gap-3 items-start mb-4">
+                     <KeyIcon className="w-6 h-6 text-red-400 flex-shrink-0 mt-1" />
+                     <div>
+                        <h4 className="font-bold text-red-400 text-lg">Hasło skompromitowane!</h4>
+                        <p className="text-slate-300 text-sm">
+                            To hasło pojawiło się w wyciekach danych aż <span className="font-bold text-white text-lg">{result.count.toLocaleString()}</span> razy.
+                        </p>
+                     </div>
+                </div>
+            )
+        } else {
+            return (
+                <div className="mt-4 bg-green-900/30 border border-green-600 p-4 rounded-lg flex gap-3 items-center mb-4">
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                    <div>
+                        <h4 className="font-bold text-green-400">Hasło nie znalezione</h4>
+                        <p className="text-xs text-slate-400">Nie figuruje w publicznych bazach wycieków.</p>
+                    </div>
+                </div>
+            )
+        }
+      };
+
+      // --- 5. KOMPONENT: SecurityCheck (Nowy - Sprawdzanie Email i Hasła) ---
+      const SecurityCheck = ({ email, password }) => {
+        const [breaches, setBreaches] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+        const [consentGiven, setConsentGiven] = useState(false);
+        const [showAll, setShowAll] = useState(false);
+        const [checkPasswordTrigger, setCheckPasswordTrigger] = useState(false);
+
+        const runChecks = async () => {
+            setConsentGiven(true);
+            setLoading(true);
+            setError(null);
+            setShowAll(false);
+            setCheckPasswordTrigger(true);
+
+            try {
+              const response = await fetch(`http://127.0.0.1:5000/check/${encodeURIComponent(email)}`);
+              if (!response.ok) throw new Error('Błąd połączenia');
+              const data = await response.json();
+              setBreaches(data.Breaches || []);
+            } catch (err) {
+              console.error("Błąd:", err);
+              setError("Nie udało się pobrać danych o wyciekach emaila.");
+            } finally {
+              setLoading(false);
+            }
+        };
+
+        const createMarkup = (htmlString) => ({ __html: htmlString });
+
+        if (!consentGiven) {
+            return (
+                <div className="mt-8 p-6 bg-slate-800 border border-slate-700 rounded-lg shadow-lg fade-in">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-blue-600/20 p-2 rounded-full">
+                            <SearchIcon className="text-blue-400 w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white">Analiza zagrożenia (Opcjonalna)</h3>
+                    </div>
+
+                    <p className="text-slate-300 mb-4 text-sm leading-relaxed">
+                        To była symulacja, ale możemy sprawdzić, czy wprowadzony email (<span className="text-blue-300 font-mono">{email}</span>)
+                        oraz hasło figurują w <strong>prawdziwych</strong> bazach wycieków.
+                    </p>
+                    <p className="text-xs text-slate-400 mb-6">
+                        <strong>Bezpieczeństwo:</strong> Hasło jest sprawdzane lokalnie (SHA-1 k-Anonymity). Pełne hasło nie jest wysyłane do sieci.
+                    </p>
+
+                    <button
+                        onClick={runChecks}
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-semibold transition-colors flex items-center justify-center gap-2"
+                    >
+                        Sprawdź email i hasło
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="mt-8 fade-in space-y-8">
+                {checkPasswordTrigger && (
+                    <div>
+                        <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                             1. Analiza hasła
+                        </h3>
+                        <PasswordCheck password={password} />
+                        {password && <PasswordAnalysis password={password} />}
+                    </div>
+                )}
+
+                <div>
+                     <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        2. Raport wycieków emaila:
+                    </h3>
+
+                    {loading && (
+                        <div className="p-4 bg-slate-800 rounded-lg text-center border border-slate-700">
+                            <div className="loader ease-linear rounded-full border-4 border-t-4 border-blue-500 h-8 w-8 mb-2 mx-auto"></div>
+                            <p className="text-slate-300 text-sm">Przeszukiwanie baz danych...</p>
+                        </div>
+                    )}
+                    {!loading && error && <div className="p-4 bg-red-900/30 border border-red-600 rounded-lg text-sm text-red-200">{error}</div>}
+
+                    {!loading && !error && (!breaches || breaches.length === 0) && (
+                        <div className="p-4 bg-green-900/20 border border-green-600 rounded-lg flex items-start gap-3">
+                            <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
+                            <div>
+                                <h4 className="font-bold text-green-400">Email czysty</h4>
+                                <p className="text-sm text-slate-300">Brak znanych wycieków powiązanych z tym adresem.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && breaches && breaches.length > 0 && (
+                        <div>
+                             <p className="text-slate-400 mb-4 text-sm">Znaleziono email w <span className="text-red-400 font-bold">{breaches.length} naruszeniach</span>.</p>
+                            <div className="space-y-4">
+                                {(showAll ? breaches : breaches.slice(0, 4)).map((breach, index) => (
+                                    <div key={index} className="bg-slate-800 p-5 rounded-lg border-l-4 border-red-500 shadow-lg flex flex-col md:flex-row gap-5">
+                                        {breach.LogoPath && (
+                                            <div className="flex-shrink-0 bg-white p-2 rounded w-16 h-16 flex items-center justify-center">
+                                                <img src={breach.LogoPath} alt={breach.Name} className="max-w-full max-h-full" />
+                                            </div>
+                                        )}
+                                        <div className="flex-grow">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h4 className="font-bold text-white text-md">{breach.Title}</h4>
+                                                <span className="text-xs font-mono text-red-300 bg-red-900/50 px-2 py-1 rounded">{breach.BreachDate}</span>
+                                            </div>
+                                            <div className="text-sm text-slate-300" dangerouslySetInnerHTML={createMarkup(breach.Description)} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {breaches.length > 4 && (
+                                <div className="mt-4 text-center">
+                                    <button onClick={() => setShowAll(!showAll)} className="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-full text-sm font-medium transition-colors border border-slate-600">
+                                        {showAll ? <><ChevronUp className="w-4 h-4" /> Zwiń</> : <><ChevronDown className="w-4 h-4" /> Pokaż resztę ({breaches.length - 4})</>}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+      };
+
+      // --- KOMPONENT: CYFROWY ODCISK PALCA (Digital Footprint) ---
+      // --- KOMPONENT: DIGITAL FOOTPRINT (Z MAPĄ) ---
+      const DigitalFootprint = () => {
+        const [ipData, setIpData] = useState(null);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+            fetch('https://ipapi.co/json/')
+                .then(res => res.json())
+                .then(data => { setIpData(data); setLoading(false); })
+                .catch(err => { console.error("Błąd IP", err); setLoading(false); });
+        }, []);
+
+        const browserInfo = navigator.userAgent;
+        let os = "Nieznany";
+        if (browserInfo.indexOf("Win") !== -1) os = "Windows";
+        if (browserInfo.indexOf("Mac") !== -1) os = "MacOS";
+        if (browserInfo.indexOf("Linux") !== -1) os = "Linux";
+        if (browserInfo.indexOf("Android") !== -1) os = "Android";
+        if (browserInfo.indexOf("iOS") !== -1) os = "iOS";
+
+        return (
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 mb-8 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-10"><Network className="w-32 h-32 text-blue-500" /></div>
+
+                <h3 className="text-xl font-bold text-blue-400 mb-2 flex items-center gap-2 relative z-10">
+                    <Monitor className="w-6 h-6" /> Twój Cyfrowy Ślad
+                </h3>
+                <p className="text-slate-400 text-sm mb-6 relative z-10">
+                    Oprócz hasła, przekazałeś nam też te informacje. Służą one przestępcom do profilowania ataku.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10 font-mono text-sm">
+                    {/* LEWA KOLUMNA: DANE */}
+                    <div className="space-y-4">
+                        <div className="bg-slate-800/50 p-4 rounded border border-slate-600">
+                            <div className="flex items-center gap-2 text-green-400 mb-2 font-bold"><Network className="w-4 h-4" /> DANE SIECIOWE</div>
+                            {loading ? <span className="animate-pulse">Analiza...</span> : (
+                                <div className="space-y-1 text-slate-300">
+                                    <div className="flex justify-between"><span>IP:</span> <span className="text-white">{ipData?.ip || "Ukryte"}</span></div>
+                                    <div className="flex justify-between"><span>Dostawca:</span> <span className="text-white">{ipData?.org || "Nieznany"}</span></div>
+                                    <div className="flex justify-between"><span>Miasto:</span> <span className="text-white">{ipData?.city || "Nieznane"}</span></div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="bg-slate-800/50 p-4 rounded border border-slate-600">
+                             <div className="flex items-center gap-2 text-purple-400 mb-2 font-bold"><Cpu className="w-4 h-4" /> URZĄDZENIE</div>
+                            <div className="space-y-1 text-slate-300">
+                                <div className="flex justify-between"><span>System:</span> <span className="text-white">{os}</span></div>
+                                <div className="flex justify-between"><span>Ekran:</span> <span className="text-white">{window.screen.width}x{window.screen.height} px</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* PRAWA KOLUMNA: MAPA */}
+                    <div className="bg-slate-800/50 p-1 rounded border border-slate-600 h-full min-h-[200px] relative overflow-hidden">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full text-slate-500 animate-pulse">Ładowanie mapy...</div>
+                        ) : ipData?.latitude ? (
+                             <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0"
+                                className="rounded opacity-80 hover:opacity-100 transition-opacity min-h-[200px]"
+                                src={`https://www.openstreetmap.org/export/embed.html?bbox=${ipData.longitude-0.1}%2C${ipData.latitude-0.1}%2C${ipData.longitude+0.1}%2C${ipData.latitude+0.1}&layer=mapnik&marker=${ipData.latitude}%2C${ipData.longitude}`}
+                             ></iframe>
+                        ) : (
+                             <div className="flex items-center justify-center h-full text-slate-500">Brak danych GPS</div>
+                        )}
+                        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">Przybliżona lokalizacja</div>
+                    </div>
+                </div>
+            </div>
+        );
+      };
+
+      // --- KOMPONENT: MINI-QUIZ DOMENOWY (NOWY) ---
+      // --- KOMPONENT: ROZBUDOWANY QUIZ DOMENOWY ---
+      const DomainQuiz = () => {
+          // Baza pytań
+          const questions = [
+              {
+                  id: 1,
+                  target: "facebook",
+                  safe: "facebook.com",
+                  fake: "faceb00k.com",
+                  trick: "Zera (0) zamiast liter (o)",
+                  context: "Logowanie do serwisu społecznościowego"
+              },
+              {
+                  id: 2,
+                  target: "google",
+                  safe: "google.com",
+                  fake: "googIe.com",
+                  trick: "Duże 'i' (I) zamiast małego 'l' (l)",
+                  context: "Pobieranie pliku z dysku Google"
+              },
+              {
+                  id: 3,
+                  target: "mbank",
+                  safe: "mbank.pl",
+                  fake: "mbank-logowanie.pl",
+                  trick: "Dopisane słowa z myślnikiem (inna domena)",
+                  context: "Potwierdzenie przelewu"
+              },
+              {
+                  id: 4,
+                  target: "netflix",
+                  safe: "netflix.com",
+                  fake: "netflix.payment-update.com",
+                  trick: "Subdomena (kropki przed nazwą główną)",
+                  context: "Aktualizacja płatności"
+              },
+              {
+                  id: 5,
+                  target: "olx",
+                  safe: "olx.pl",
+                  fake: "olx.dostawa-kurier.pl",
+                  trick: "Fałszywa bramka płatności (Dostawa)",
+                  context: "Odbiór pieniędzy za sprzedany przedmiot"
+              }
+          ];
+
+          const [currentQ, setCurrentQ] = useState(0);
+          const [score, setScore] = useState(0);
+          const [showResult, setShowResult] = useState(false); // Czy pokazano wynik rundy
+          const [isCorrect, setIsCorrect] = useState(false);
+          const [gameFinished, setGameFinished] = useState(false);
+
+          // Funkcja losująca kolejność przycisków (żeby fake nie był zawsze po prawej)
+          // Używamy useMemo żeby nie mieszało przy każdym renderze
+          const currentQuestion = questions[currentQ];
+          const [isFlipped, setIsFlipped] = useState(false);
+
+          useEffect(() => {
+              setIsFlipped(Math.random() > 0.5); // Losuj układ przy zmianie pytania
+              setShowResult(false);
+          }, [currentQ]);
+
+          const handleAnswer = (chosen) => {
+              if (showResult) return; // Blokada klikania po wyborze
+
+              const correct = chosen === 'safe';
+              setIsCorrect(correct);
+              if (correct) setScore(score + 1);
+              setShowResult(true);
+          };
+
+          const nextQuestion = () => {
+              if (currentQ + 1 < questions.length) {
+                  setCurrentQ(currentQ + 1);
+              } else {
+                  setGameFinished(true);
+              }
+          };
+
+          const resetQuiz = () => {
+              setCurrentQ(0);
+              setScore(0);
+              setGameFinished(false);
+              setShowResult(false);
+          };
+
+          // --- EKRAN KOŃCOWY ---
+          if (gameFinished) {
+              return (
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 mt-8 text-center mb-4">
+                    <h3 className="text-2xl font-bold text-white mb-4">Twój Wynik</h3>
+                    <div className="text-6xl font-bold mb-4 text-blue-400">{score} / {questions.length}</div>
+                    <p className="text-slate-300 mb-6">
+                        {score === questions.length
+                            ? "Mistrz Cyberbezpieczeństwa! Nic Cię nie oszuka."
+                            : score > 2
+                                ? "Nieźle, ale bądź czujny. Hakerzy są sprytni."
+                                : "Musisz bardziej uważać na adresy URL!"}
+                    </p>
+                    <button
+                        onClick={resetQuiz}
+                        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-full font-bold transition-colors"
+                    >
+                        Zagraj jeszcze raz
+                    </button>
+                </div>
+              );
+          }
+
+          // --- EKRAN PYTANIA ---
+          return (
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 mt-8 transition-all mb-4">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Target className="text-yellow-400 w-5 h-5" />
+                        Trening: Poziom {currentQ + 1}/{questions.length}
+                    </h3>
+                    <span className="text-sm font-mono text-slate-400">Punkty: {score}</span>
+                </div>
+
+                <p className="text-sm text-slate-300 mb-2">
+                    Sytuacja: <strong>{currentQuestion.context}</strong>.
+                </p>
+                <p className="text-sm text-slate-400 mb-6">
+                    Który link klikniesz?
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Renderujemy przyciski w losowej kolejności */}
+                    {[
+                        { type: 'safe', label: currentQuestion.safe, isSafe: true },
+                        { type: 'fake', label: currentQuestion.fake, isSafe: false }
+                    ].sort(() => (isFlipped ? -1 : 1)).map((btn) => (
+                        <button
+                            key={btn.type}
+                            onClick={() => handleAnswer(btn.type)}
+                            disabled={showResult}
+                            className={`
+                                p-4 rounded border-2 text-center transition-all relative
+                                ${showResult && btn.isSafe ? 'border-green-500 bg-green-900/20' : ''}
+                                ${showResult && !btn.isSafe ? 'border-red-500 bg-red-900/20 opacity-50' : ''}
+                                ${!showResult ? 'border-slate-600 bg-slate-700 hover:bg-slate-600 hover:border-slate-500' : ''}
+                            `}
+                        >
+                            <span className="font-mono text-lg font-bold block break-all">{btn.label}</span>
+
+                            {/* Oznaczenia po kliknięciu */}
+                            {showResult && btn.isSafe && (
+                                <div className="text-green-400 text-xs mt-2 font-bold flex items-center justify-center gap-1">
+                                    <CheckCircle2 className="w-4 h-4" /> BEZPIECZNY
+                                </div>
+                            )}
+                            {showResult && !btn.isSafe && (
+                                <div className="text-red-400 text-xs mt-2 font-bold flex items-center justify-center gap-1">
+                                    <XCircle className="w-4 h-4" /> OSZUSTWO
+                                </div>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* --- WYJAŚNIENIE (POJAWIA SIĘ PO ODPOWIEDZI) --- */}
+                {showResult && (
+                    <div className="mt-6 animate-pulse-once">
+                        <div className={`p-4 rounded-lg mb-4 ${isCorrect ? 'bg-green-900/30 border border-green-800' : 'bg-red-900/30 border border-red-800'}`}>
+                            <p className={`font-bold ${isCorrect ? 'text-green-400' : 'text-red-400'} mb-1`}>
+                                {isCorrect ? "Świetnie! Dobre oko." : "Ups! Dałeś się złapać."}
+                            </p>
+                            <p className="text-slate-300 text-sm">
+                                <strong>Na czym polegał trik?</strong> {currentQuestion.trick}
+                            </p>
+                        </div>
+
+                        <div className="text-center">
+                            <button
+                                onClick={nextQuestion}
+                                className="bg-slate-600 hover:bg-slate-500 text-white py-2 px-8 rounded-full font-semibold transition-colors"
+                            >
+                                {currentQ + 1 < questions.length ? "Następne pytanie" : "Zobacz wynik"}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+          );
+      };
+
+      // --- KOMPONENT: ANALIZA SIŁY HASŁA (RAPORT KOŃCOWY) ---
+      const PasswordAnalysis = ({ password }) => {
+        // 1. Obliczanie punktów (0-100)
+        const calculateScore = (pass) => {
+            if (!pass) return 0;
+            let score = 0;
+            if (pass.length > 8) score += 20;
+            if (pass.length > 12) score += 20;
+            if (/[A-Z]/.test(pass)) score += 15;
+            if (/[0-9]/.test(pass)) score += 15;
+            if (/[^A-Za-z0-9]/.test(pass)) score += 30;
+            return Math.min(score, 100);
+        };
+
+        // 2. Szacowanie czasu łamania (Symulacja edukacyjna)
+        const estimateCrackTime = (pass) => {
+            if (!pass) return "0 sekund";
+            const score = calculateScore(pass);
+            if (score < 30) return "kilka sekund";
+            if (score < 50) return "kilka minut";
+            if (score < 70) return "kilka dni";
+            if (score < 90) return "kilka lat";
+            return "wieki";
+        };
+
+        const score = calculateScore(password);
+        const timeToCrack = estimateCrackTime(password);
+
+        let color = "bg-red-500";
+        let label = "Bardzo słabe";
+        let message = "To hasło jest podatne na prosty atak słownikowy.";
+
+        if (score >= 40) { color = "bg-yellow-500"; label = "Średnie"; message = "Dobre, ale warto dodać znaki specjalne."; }
+        if (score >= 80) { color = "bg-green-500"; label = "Silne"; message = "Świetne hasło! Trudne do złamania metodą siłową."; }
+
+        return (
+            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 mb-8 relative overflow-hidden">
+                <div className="flex items-start justify-between relative z-10">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-1">
+                            <Gauge className="w-5 h-5 text-purple-400" />
+                            Analiza jakości Twojego hasła
+                        </h3>
+                        <p className="text-slate-400 text-sm">
+                            Gdybyś nie podał go na tacy, haker musiałby je łamać (Brute Force).
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-xs text-slate-500 uppercase tracking-wide">Szacowany czas łamania</div>
+                        <div className="text-xl font-mono text-purple-300 font-bold">{timeToCrack}</div>
+                    </div>
+                </div>
+
+                <div className="mt-6">
+                    <div className="flex justify-between text-xs text-white mb-2 font-semibold">
+                        <span>Jakość: <span style={{color: score < 40 ? '#ef4444' : score < 80 ? '#eab308' : '#22c55e'}}>{label}</span></span>
+                        <span>{score}/100 pkt</span>
+                    </div>
+
+                    {/* Pasek postępu */}
+                    <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                        <div
+                            className={`h-full transition-all duration-1000 ease-out ${color}`}
+                            style={{ width: `${score}%` }}
+                        ></div>
+                    </div>
+
+                    <p className="text-xs text-slate-400 mt-3 border-l-2 border-slate-600 pl-3 italic">
+                        "{message}"
+                    </p>
+                </div>
+            </div>
+        );
+      };
+
+      // --- 6. GŁÓWNY KOMPONENT APP (Oryginalna struktura) ---
+      const PhishingSimulator = () => {
+        const [isPhished, setIsPhished] = useState(false);
+        const [email, setEmail] = useState("");
+        const [password, setPassword] = useState("");
+
+        const handleLogin = (e) => {
+          e.preventDefault();
+          if (email && password) {
+            setIsPhished(true);
+          }
+        };
+
+        const resetSimulation = () => {
+          setEmail("");
+          setPassword("");
+          setIsPhished(false);
+        };
+
+        // WIDOK 1: PRZYNĘTA (BEZ ZMIAN)
+        if (!isPhished) {
+          return (
+            <div className="min-h-screen bg-[#f0f2f5] flex flex-col md:flex-row items-center justify-center px-4 md:px-0 font-sans">
+              <div className="w-full max-w-[980px] flex flex-col md:flex-row items-start justify-between gap-4 md:gap-10 pt-20 md:pt-0">
+                <div className="flex-1 text-center md:text-left mt-8 md:mt-0">
+                  <h1 className="text-[#1877f2] text-6xl font-bold tracking-tighter mb-2" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>facebook</h1>
+                  <p className="text-[#1c1e21] text-2xl md:text-[28px] leading-8 w-full md:w-[500px]">Bądź w kontakcie ze znajomymi i dziel się treściami.</p>
+                </div>
+                <div className="flex-1 w-full max-w-[396px]">
+                  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                      <input type="text" placeholder="Adres e-mail lub numer telefonu" className="w-full p-3.5 border border-gray-300 rounded-md text-[17px] focus:outline-none focus:ring-1 focus:ring-[#1877f2] focus:border-[#1877f2]" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      <input type="password" placeholder="Hasło" className="w-full p-3.5 border border-gray-300 rounded-md text-[17px] focus:outline-none focus:ring-1 focus:ring-[#1877f2] focus:border-[#1877f2]" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                      <button type="submit" className="w-full bg-[#1877f2] hover:bg-[#166fe5] text-white text-[20px] font-bold py-2.5 rounded-md transition-colors duration-200">Zaloguj się</button>
+                      <div className="text-center mt-2"><a href="#" className="text-[#1877f2] text-sm hover:underline cursor-pointer">Nie pamiętasz hasła?</a></div>
+                      <div className="border-b border-gray-300 my-2"></div>
+                      <div className="flex justify-center mt-2"><button type="button" className="bg-[#42b72a] hover:bg-[#36a420] text-white font-bold py-3 px-4 rounded-md transition-colors duration-200 text-[17px]">Utwórz nowe konto</button></div>
+                    </form>
+                  </div>
+                  <p className="mt-8 text-sm text-center text-gray-600"><span className="font-bold text-black cursor-pointer hover:underline">Utwórz stronę</span> dla gwiazdy, marki lub firmy.</p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // WIDOK 2: EDUKACJA (DODANA INTEGRACJA)
+        return (
+          <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 relative overflow-y-auto font-sans">
+            <div className="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+            <div className="absolute -top-40 -right-40 w-96 h-96 bg-red-600 rounded-full blur-[128px] opacity-20"></div>
+
+            <div className="max-w-3xl w-full bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 md:p-12 shadow-2xl relative z-10 my-10">
+              <div className="flex flex-col items-center text-center mb-10">
+                <div className="bg-red-500/20 p-6 rounded-full mb-6 animate-pulse">
+                  <ShieldAlert className="w-20 h-20 text-red-500" />
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold text-red-500 mb-4">STOP! To był Phishing.</h2>
+                <p className="text-xl md:text-2xl text-slate-300">
+                  To ćwiczenie z cyberbezpieczeństwa. <br />
+                  <span className="text-white font-semibold">Właśnie przekazałeś swoje hasło na fałszywej stronie.</span>
+                </p>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-6 border border-slate-700 mb-8">
+                <h3 className="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" /> Co zdradziło tę stronę?
+                </h3>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <Globe className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-red-400">Pasek adresu (URL):</strong>
+                      <p className="text-slate-400 text-sm">Spójrz w górę przeglądarki. Czy widzisz tam <code>facebook.com</code>? Nie.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Lock className="w-6 h-6 text-yellow-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-yellow-400">Poczucie bezpieczeństwa:</strong>
+                      <p className="text-slate-400 text-sm">Oszuści kopiują kod CSS (style) 1:1, aby Cię oszukać.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 mb-8">
+                <div className="bg-green-900/20 p-4 rounded-lg border border-green-900/50">
+                  <h4 className="flex items-center gap-2 font-bold text-green-400 mb-2"><CheckCircle2 className="w-5 h-5" /> Co robić:</h4>
+                  <ul className="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                    <li>Zawsze weryfikuj adres URL</li>
+                    <li>Używaj Menedżera haseł</li>
+                    <li>Włącz weryfikację dwuetapową (2FA)</li>
+                  </ul>
+                </div>
+                <div className="bg-red-900/20 p-4 rounded-lg border border-red-900/50">
+                  <h4 className="flex items-center gap-2 font-bold text-red-400 mb-2"><XCircle className="w-5 h-5" /> Czego unikać:</h4>
+                  <ul className="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                    <li>Klikania w linki "Zaloguj się" z maili</li>
+                    <li>Logowania pod presją czasu</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* --- TUTAJ JEST NOWA INTEGRACJA --- */}
+              <div className="border-t border-slate-700 pt-8 mb-8">
+                <SecurityCheck email={email} password={password} />
+              </div>
+
+              <DigitalFootprint />
+              <DomainQuiz />
+
+              <div className="text-center">
+                <button onClick={resetSimulation} className="bg-slate-700 hover:bg-slate-600 text-white py-3 px-8 rounded-full font-medium transition-all">Zresetuj symulację</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<PhishingSimulator />);
+    </script>
+  </body>
+</html>
